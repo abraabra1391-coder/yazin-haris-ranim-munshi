@@ -251,7 +251,8 @@ function initInvitationUnlock() {
 /* ================= Countdown Timer ================= */
 function initCountdown() {
   // Target date: 21st December 2026 (00:00:00 IST)
-  const targetDate = new Date("2026-12-21T00:00:00+05:30").getTime();
+  // Date.UTC(2026, 11, 20, 18, 30, 0) == 2026-12-21 00:00:00 IST
+  const targetDate = Date.UTC(2026, 11, 20, 18, 30, 0);
 
   function calc() {
     const diff = Math.max(0, targetDate - Date.now());
