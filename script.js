@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initCountdown();
   initScrollReveals();
   initRSVPForm();
+  initOwnerView();
   initScratchCard();
 });
 
@@ -316,7 +317,7 @@ function initScrollReveals() {
 // Google Sheets Web App Endpoint (for Spreadsheet: Yazin&ranim weddding)
 const GOOGLE_SHEET_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
 
-/* ================= RSVP Form Handler (Direct to Google Sheets) ================= */
+/* ================= RSVP Form Handler (Direct to Google Sheets & Local Archive) ================= */
 function initRSVPForm() {
   const form = document.getElementById("rsvpForm");
   const submitBtn = document.getElementById("rsvpSubmitBtn") || form?.querySelector('button[type="submit"]');
@@ -341,13 +342,14 @@ function initRSVPForm() {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        Saving to Guest List...
+        Saving RSVP...
       `;
     }
     if (successEl) successEl.classList.add("hidden");
     if (errorEl) errorEl.classList.add("hidden");
 
     try {
+      // 1. Save to Google Sheets
       const formData = new FormData();
       formData.append("name", name);
       formData.append("attendance", attendance);
@@ -360,10 +362,32 @@ function initRSVPForm() {
           body: formData,
           mode: "no-cors"
         });
-      } else {
-        // Fallback log before deployment
-        console.log("RSVP submitted to guest list:", { name, contact, attendance, guests, message });
-        await new Promise((res) => setTimeout(res, 600));
+      }
+
+      // 2. Save locally for Owner View
+      const entry = {
+        id: "rsvp_" + Date.now(),
+        name,
+        attendance,
+        guests,
+        message,
+        timestamp: new Date().toLocaleString("en-IN", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        })
+      };
+      try {
+        const stored = JSON.parse(localStorage.getItem("wedding_rsvps") || "[]");
+        stored.unshift(entry);
+        localStorage.setItem("wedding_rsvps", JSON.stringify(stored));
+        if (typeof renderOwnerDashboard === "function") {
+          renderOwnerDashboard();
+        }
+      } catch (localErr) {
+        console.warn("localStorage note:", localErr);
       }
 
       // Success feedback
@@ -390,6 +414,243 @@ function initRSVPForm() {
       }
     }
   });
+}
+
+/* ================= Owner View Management (Password: 123456) ================= */
+const OWNER_PASSWORD = "123456";
+
+function initOwnerView() {
+  const loginBtn = document.getElementById("ownerLoginBtn");
+  const loginText = document.getElementById("ownerLoginText");
+  const lockIcon = document.getElementById("ownerLockIcon");
+  const dashboard = document.getElementById("ownerDashboard");
+  const logoutBtn = document.getElementById("ownerLogoutBtn");
+  const modal = document.getElementById("ownerPasswordModal");
+  const passForm = document.getElementById("ownerPasswordForm");
+  const passInput = document.getElementById("ownerPasswordInput");
+  const passError = document.getElementById("ownerPasswordError");
+  const closeModalBtn = document.getElementById("closeOwnerModalBtn");
+
+  let isAuthed = sessionStorage.getItem("ownerAuthed") === "true";
+
+  function updateUI() {
+    if (isAuthed) {
+      if (dashboard) dashboard.classList.remove("hidden");
+      if (loginText) loginText.textContent = "Log out of Owner View";
+      if (lockIcon) {
+        lockIcon.innerHTML = `
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+        `;
+      }
+      renderOwnerDashboard();
+    } else {
+      if (dashboard) dashboard.classList.add("hidden");
+      if (loginText) loginText.textContent = "Owner View";
+      if (lockIcon) {
+        lockIcon.innerHTML = `
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        `;
+      }
+    }
+  }
+
+  function openModal() {
+    if (modal) {
+      modal.classList.remove("hidden");
+      if (passInput) {
+        passInput.value = "";
+        setTimeout(() => passInput.focus(), 60);
+      }
+      if (passError) passError.classList.add("hidden");
+    }
+  }
+
+  function closeModal() {
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function logout() {
+    if (confirm("Log out of Owner View?")) {
+      sessionStorage.removeItem("ownerAuthed");
+      isAuthed = false;
+      updateUI();
+    }
+  }
+
+  // URL query check: ?admin=1 or ?owner=1
+  const params = new URLSearchParams(window.location.search);
+  if ((params.get("admin") === "1" || params.get("owner") === "1") && !isAuthed) {
+    setTimeout(openModal, 400);
+  }
+
+  if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+      if (isAuthed) {
+        logout();
+      } else {
+        openModal();
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", logout);
+  }
+
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener("click", closeModal);
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  if (passForm) {
+    passForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const entered = passInput ? passInput.value.trim() : "";
+      if (entered === OWNER_PASSWORD) {
+        sessionStorage.setItem("ownerAuthed", "true");
+        isAuthed = true;
+        closeModal();
+        updateUI();
+        if (dashboard) {
+          setTimeout(() => {
+            dashboard.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 150);
+        }
+      } else {
+        if (passError) passError.classList.remove("hidden");
+        if (passInput) {
+          passInput.focus();
+          passInput.select();
+        }
+      }
+    });
+  }
+
+  updateUI();
+}
+
+function renderOwnerDashboard() {
+  const listEl = document.getElementById("ownerResponsesList");
+  const statTotal = document.getElementById("statTotalResponses");
+  const statAttending = document.getElementById("statAttending");
+  const statDeclined = document.getElementById("statDeclined");
+  const statGuests = document.getElementById("statTotalGuests");
+  if (!listEl) return;
+
+  let responses = [];
+  try {
+    responses = JSON.parse(localStorage.getItem("wedding_rsvps") || "[]");
+  } catch (e) {
+    responses = [];
+  }
+
+  let attendingCount = 0;
+  let declinedCount = 0;
+  let guestsCount = 0;
+
+  responses.forEach((r) => {
+    if (r.attendance === "Joyfully Accepts" || r.attendance === "Attending") {
+      attendingCount++;
+      const numMatch = String(r.guests || "").match(/\d+/);
+      const parsedNum = numMatch ? parseInt(numMatch[0], 10) : 1;
+      guestsCount += parsedNum;
+    } else {
+      declinedCount++;
+    }
+  });
+
+  if (statTotal) statTotal.textContent = responses.length;
+  if (statAttending) statAttending.textContent = attendingCount;
+  if (statDeclined) statDeclined.textContent = declinedCount;
+  if (statGuests) statGuests.textContent = guestsCount;
+
+  if (responses.length === 0) {
+    listEl.innerHTML = `
+      <div class="text-center py-8 px-4 border border-dashed border-gold/40 rounded-sm bg-warm-white/60">
+        <p class="font-serif text-lg text-foreground/80">No local RSVP records yet on this browser</p>
+        <p class="text-xs font-sans text-foreground/60 mt-1">Guest submissions are directly recorded in your connected Google Sheet.</p>
+        <div class="mt-4">
+          <a href="https://docs.google.com/spreadsheets/d/1z7siLZzXiraSAM49aGR6edUACLC1EHlNfQvbiRI8D8s/edit?usp=sharing"
+            target="_blank" rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 font-sans text-xs uppercase tracking-wider text-burgundy font-semibold hover:text-gold transition-colors">
+            Open Google Sheet to view all live responses &rarr;
+          </a>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = responses.map((r) => {
+    const isAttending = r.attendance === "Joyfully Accepts" || r.attendance === "Attending";
+    const badgeClass = isAttending
+      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+      : "bg-rose-100 text-rose-800 border-rose-300";
+    return `
+      <div class="p-4 border border-gold/30 bg-white/95 rounded-sm shadow-sm hover:border-gold/60 transition-colors flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div class="flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <h4 class="font-serif text-lg font-semibold text-burgundy">${escapeHtml(r.name || "Guest")}</h4>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider border ${badgeClass}">
+              ${escapeHtml(r.attendance || "Joyfully Accepts")}
+            </span>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-sans font-medium uppercase tracking-wider bg-gold/15 text-foreground/80 border border-gold/30">
+              ${escapeHtml(r.guests || "1 Person")}
+            </span>
+          </div>
+          ${r.message ? `
+            <p class="mt-2 font-serif text-sm italic text-foreground/85 bg-warm-white/70 p-2.5 rounded-sm border-l-2 border-gold">
+              “${escapeHtml(r.message)}”
+            </p>
+          ` : `
+            <p class="mt-1 text-xs font-sans text-foreground/40 italic">No message provided</p>
+          `}
+          <span class="inline-block mt-2 font-sans text-[10px] text-foreground/50">
+            Submitted: ${escapeHtml(r.timestamp || "")}
+          </span>
+        </div>
+        <div>
+          <button type="button" onclick="deleteOwnerRSVP('${r.id}')"
+            class="text-rose-500 hover:text-rose-700 p-1.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+            title="Delete this entry">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function deleteOwnerRSVP(id) {
+  if (!confirm("Are you sure you want to remove this RSVP entry?")) return;
+  try {
+    let responses = JSON.parse(localStorage.getItem("wedding_rsvps") || "[]");
+    responses = responses.filter((r) => r.id !== id);
+    localStorage.setItem("wedding_rsvps", JSON.stringify(responses));
+    renderOwnerDashboard();
+  } catch (e) {
+    console.error(e);
+  }
+}
+window.deleteOwnerRSVP = deleteOwnerRSVP;
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 /* ================= Scratch Card Implementation ================= */
