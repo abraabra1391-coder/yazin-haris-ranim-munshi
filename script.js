@@ -16,7 +16,7 @@ const weddingConfig = {
     residence: "RCHS, Raheja Complex, Versova, Mumbai"
   },
   compliments: "With Love, Raihan Family",
-  date: "2026-12-21T17:00:00",
+  date: "2026-12-21T00:00:00+05:30",
   dateLabel: "21 • DECEMBER • 2026",
   timeLabel: "Arrive by – 5:00 PM",
   venue: {
@@ -250,8 +250,8 @@ function initInvitationUnlock() {
 
 /* ================= Countdown Timer ================= */
 function initCountdown() {
-  // Target date: 21st December 2026, 5:00 PM IST (17:00:00)
-  const targetDate = new Date("2026-12-21T17:00:00+05:30").getTime();
+  // Target date: 21st December 2026 (00:00:00 IST)
+  const targetDate = new Date("2026-12-21T00:00:00+05:30").getTime();
 
   function calc() {
     const diff = Math.max(0, targetDate - Date.now());
