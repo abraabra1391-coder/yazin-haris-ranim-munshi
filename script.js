@@ -15,7 +15,7 @@ const weddingConfig = {
     mother: "Mrs. Maria Irfan",
     residence: "RCHS, Raheja Complex, Versova, Mumbai"
   },
-  compliments: "Descendants of Raihan",
+  compliments: "With Love, Raihan Family",
   date: "2026-12-21T17:00:00",
   dateLabel: "21 • DECEMBER • 2026",
   timeLabel: "Arrive by – 5:00 PM",
