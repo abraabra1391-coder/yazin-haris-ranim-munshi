@@ -250,16 +250,17 @@ function initInvitationUnlock() {
 
 /* ================= Countdown Timer ================= */
 function initCountdown() {
-  const targetDate = new Date(weddingConfig.date).getTime();
+  // Target date: 21st December 2026, 5:00 PM IST (17:00:00)
+  const targetDate = new Date("2026-12-21T17:00:00+05:30").getTime();
 
   function calc() {
     const diff = Math.max(0, targetDate - Date.now());
-    return {
-      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-      minutes: Math.floor((diff / (1000 * 60)) % 60),
-      seconds: Math.floor((diff / 1000) % 60)
-    };
+    const totalSeconds = Math.floor(diff / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return { days, hours, minutes, seconds };
   }
 
   function update() {
