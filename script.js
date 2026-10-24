@@ -18,7 +18,7 @@ const weddingConfig = {
   compliments: "With Love, Raihan Family",
   date: "2026-12-21T00:00:00+05:30",
   dateLabel: "21 • DECEMBER • 2026",
-  timeLabel: "Arrive by – 5:00 PM",
+  timeLabel: "Arrive by – 5:30 PM",
   venue: {
     name: "Vismaya Convention Center",
     address: "Kollam - Elampalloor Rd, Kundara",
