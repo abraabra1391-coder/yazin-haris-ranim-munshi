@@ -4,7 +4,7 @@ const weddingConfig = {
     name: "Yazin",
     fullName: "Yazin Haris Thangal",
     father: "Mr. Haris Jasin Thangal",
-    mother: "Mrs. Shahana Haris",
+    mother: "Mrs. Shahna Haris",
     residence: "Raihan, Ziyarat Nagar-81, Mangad P.O, Kollam",
     grandparents: "Grandson of Mr. Sayyid Jasin Thangal & Mrs. Fathima J Thangal and Mr. Sulaiman Kunju & Mrs. Raheena Beevi"
   },
