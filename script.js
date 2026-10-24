@@ -416,8 +416,8 @@ function initRSVPForm() {
   });
 }
 
-/* ================= Owner View Management (Password: 123456) ================= */
-const OWNER_PASSWORD = "123456";
+/* ================= Owner View Management (Password: 212026) ================= */
+const OWNER_PASSWORD = "212026";
 
 function initOwnerView() {
   const loginBtn = document.getElementById("ownerLoginBtn");
