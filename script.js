@@ -48,17 +48,30 @@ function initAudio() {
 
   audio.volume = 0.3;
 
+  function syncPlayingUI() {
+    if (musicToggle) {
+      musicToggle.classList.remove("paused");
+      musicToggle.classList.add("playing");
+      const statusText = musicToggle.querySelector(".music-status");
+      if (statusText) statusText.textContent = "Music On";
+    }
+  }
+
+  function syncPausedUI() {
+    if (musicToggle) {
+      musicToggle.classList.remove("playing");
+      musicToggle.classList.add("paused");
+      const statusText = musicToggle.querySelector(".music-status");
+      if (statusText) statusText.textContent = "Music Off";
+    }
+  }
+
   function attemptPlay() {
     audio.play().then(() => {
-      if (musicToggle) {
-        musicToggle.classList.remove("paused");
-        musicToggle.classList.add("playing");
-        const statusText = musicToggle.querySelector(".music-status");
-        if (statusText) statusText.textContent = "Music On";
-      }
+      syncPlayingUI();
       removeListeners();
     }).catch(() => {
-      // Autoplay blocked until gesture
+      // Autoplay blocked until gesture on mobile
     });
   }
 
@@ -72,9 +85,14 @@ function initAudio() {
     window.removeEventListener("keydown", onUserGesture);
   }
 
-  window.addEventListener("pointerdown", onUserGesture);
-  window.addEventListener("touchstart", onUserGesture);
-  window.addEventListener("keydown", onUserGesture);
+  window.addEventListener("pointerdown", onUserGesture, { passive: true });
+  window.addEventListener("touchstart", onUserGesture, { passive: true });
+  window.addEventListener("keydown", onUserGesture, { passive: true });
+
+  // Direct audio event synchronization (handles envelope unlock, native iOS audio controls, etc.)
+  audio.addEventListener("play", syncPlayingUI);
+  audio.addEventListener("playing", syncPlayingUI);
+  audio.addEventListener("pause", syncPausedUI);
 
   // Attempt initial play
   attemptPlay();
@@ -85,17 +103,13 @@ function initAudio() {
       removeListeners();
       if (audio.paused) {
         audio.play().then(() => {
-          musicToggle.classList.remove("paused");
-          musicToggle.classList.add("playing");
-          const statusText = musicToggle.querySelector(".music-status");
-          if (statusText) statusText.textContent = "Music On";
+          syncPlayingUI();
+        }).catch((err) => {
+          console.warn("Audio playback prevented:", err);
         });
       } else {
         audio.pause();
-        musicToggle.classList.remove("playing");
-        musicToggle.classList.add("paused");
-        const statusText = musicToggle.querySelector(".music-status");
-        if (statusText) statusText.textContent = "Music Off";
+        syncPausedUI();
       }
     });
   }
