@@ -46,8 +46,9 @@ function initAudio() {
   const musicToggle = document.getElementById("musicToggle");
   if (!audio) return;
 
-  // Set volume to 30% and ensure looping
-  audio.volume = 0.3;
+  // Set comfortable volume and ensure unmuted & looping
+  audio.muted = false;
+  audio.volume = 0.6; // Clear, comfortable volume for wedding music
   audio.loop = true;
 
   function syncPlayingUI() {
@@ -64,18 +65,20 @@ function initAudio() {
       musicToggle.classList.remove("playing");
       musicToggle.classList.add("paused");
       const statusText = musicToggle.querySelector(".music-status");
-      if (statusText) statusText.textContent = "Music Off";
+      if (statusText) statusText.textContent = "Play Music";
     }
   }
 
   function attemptPlay() {
+    audio.muted = false;
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.then(() => {
         syncPlayingUI();
         removeListeners();
-      }).catch(() => {
-        // Autoplay may be restricted until first user interaction
+      }).catch((err) => {
+        // Autoplay may be restricted by browser policy until first user interaction
+        syncPausedUI();
       });
     }
   }
@@ -85,21 +88,27 @@ function initAudio() {
   }
 
   function removeListeners() {
-    window.removeEventListener("pointerdown", onUserGesture);
-    window.removeEventListener("touchstart", onUserGesture);
-    window.removeEventListener("click", onUserGesture);
-    window.removeEventListener("keydown", onUserGesture);
+    document.removeEventListener("click", onUserGesture);
+    document.removeEventListener("touchstart", onUserGesture);
+    document.removeEventListener("touchend", onUserGesture);
+    document.removeEventListener("pointerdown", onUserGesture);
+    document.removeEventListener("keydown", onUserGesture);
   }
 
-  window.addEventListener("pointerdown", onUserGesture, { passive: true });
-  window.addEventListener("touchstart", onUserGesture, { passive: true });
-  window.addEventListener("click", onUserGesture, { passive: true });
-  window.addEventListener("keydown", onUserGesture, { passive: true });
+  // Listen for user gestures across the entire document
+  document.addEventListener("click", onUserGesture, { passive: true });
+  document.addEventListener("touchstart", onUserGesture, { passive: true });
+  document.addEventListener("touchend", onUserGesture, { passive: true });
+  document.addEventListener("pointerdown", onUserGesture, { passive: true });
+  document.addEventListener("keydown", onUserGesture, { passive: true });
 
   // Direct audio event synchronization
   audio.addEventListener("play", syncPlayingUI);
   audio.addEventListener("playing", syncPlayingUI);
   audio.addEventListener("pause", syncPausedUI);
+  audio.addEventListener("error", (e) => {
+    console.warn("Wedding audio encountered an error:", audio.error);
+  });
 
   // Start playing immediately when website loads
   attemptPlay();
@@ -109,6 +118,7 @@ function initAudio() {
       e.stopPropagation();
       removeListeners();
       if (audio.paused) {
+        audio.muted = false;
         audio.play().then(() => {
           syncPlayingUI();
         }).catch((err) => {

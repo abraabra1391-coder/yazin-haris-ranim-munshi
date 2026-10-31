@@ -197,9 +197,23 @@ body {
   animation: sound-bar 0.8s ease-in-out 0.4s infinite alternate;
 }
 
+.music-toggle-btn.paused {
+  animation: music-pill-pulse 2s ease-in-out infinite;
+}
+
 .music-toggle-btn.paused .music-bar {
   height: 3px;
   animation: none;
+}
+
+@keyframes music-pill-pulse {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(74, 15, 28, 0.25);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.55);
+    border-color: rgba(212, 175, 55, 0.85);
+  }
 }
 
 @keyframes sound-bar {
