@@ -71,6 +71,22 @@
 
 <body class="antialiased bg-background text-foreground">
 
+  <!-- Background Wedding Music Component -->
+  <audio id="weddingAudio" src="music/background.mp3" autoplay loop preload="auto" playsinline
+    aria-label="Background wedding music">
+    <source src="music/background.mp3" type="audio/mpeg">
+    <source src="audio/ayisha.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- Floating Music Toggle Pill -->
+  <button class="music-toggle-btn paused" id="musicToggle" type="button" aria-label="Toggle background music">
+    <div class="music-icon-bars" aria-hidden="true">
+      <span class="music-bar"></span>
+      <span class="music-bar"></span>
+      <span class="music-bar"></span>
+    </div>
+    <span class="music-status">Play Music</span>
+  </button>
 
   <main class="relative">
 
@@ -980,7 +996,7 @@
   </div>
 
   <!-- Application Script -->
-  <script src="script.js?v=3.4"></script>
+  <script src="script.js?v=3.5"></script>
 </body>
 
 </html>

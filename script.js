@@ -28,6 +28,7 @@ const weddingConfig = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  initAudio();
   initPetals(12);
   initHeaderScroll();
   initMobileMenu();
@@ -38,6 +39,88 @@ document.addEventListener("DOMContentLoaded", () => {
   initOwnerView();
   initScratchCard();
 });
+
+/* ================= Audio Player Component ================= */
+function initAudio() {
+  const audio = document.getElementById("weddingAudio");
+  const musicToggle = document.getElementById("musicToggle");
+  if (!audio) return;
+
+  // Set volume to 30% and ensure looping
+  audio.volume = 0.3;
+  audio.loop = true;
+
+  function syncPlayingUI() {
+    if (musicToggle) {
+      musicToggle.classList.remove("paused");
+      musicToggle.classList.add("playing");
+      const statusText = musicToggle.querySelector(".music-status");
+      if (statusText) statusText.textContent = "Music On";
+    }
+  }
+
+  function syncPausedUI() {
+    if (musicToggle) {
+      musicToggle.classList.remove("playing");
+      musicToggle.classList.add("paused");
+      const statusText = musicToggle.querySelector(".music-status");
+      if (statusText) statusText.textContent = "Music Off";
+    }
+  }
+
+  function attemptPlay() {
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        syncPlayingUI();
+        removeListeners();
+      }).catch(() => {
+        // Autoplay may be restricted until first user interaction
+      });
+    }
+  }
+
+  function onUserGesture() {
+    attemptPlay();
+  }
+
+  function removeListeners() {
+    window.removeEventListener("pointerdown", onUserGesture);
+    window.removeEventListener("touchstart", onUserGesture);
+    window.removeEventListener("click", onUserGesture);
+    window.removeEventListener("keydown", onUserGesture);
+  }
+
+  window.addEventListener("pointerdown", onUserGesture, { passive: true });
+  window.addEventListener("touchstart", onUserGesture, { passive: true });
+  window.addEventListener("click", onUserGesture, { passive: true });
+  window.addEventListener("keydown", onUserGesture, { passive: true });
+
+  // Direct audio event synchronization
+  audio.addEventListener("play", syncPlayingUI);
+  audio.addEventListener("playing", syncPlayingUI);
+  audio.addEventListener("pause", syncPausedUI);
+
+  // Start playing immediately when website loads
+  attemptPlay();
+
+  if (musicToggle) {
+    musicToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeListeners();
+      if (audio.paused) {
+        audio.play().then(() => {
+          syncPlayingUI();
+        }).catch((err) => {
+          console.warn("Audio playback prevented:", err);
+        });
+      } else {
+        audio.pause();
+        syncPausedUI();
+      }
+    });
+  }
+}
 
 /* ================= Petals Animation ================= */
 function initPetals() {
@@ -151,6 +234,11 @@ function unlockInvitation() {
   setTimeout(() => {
     initScratchCard();
   }, 100);
+
+  const audio = document.getElementById("weddingAudio");
+  if (audio && audio.paused) {
+    audio.play().catch(() => {});
+  }
 }
 
 function initInvitationUnlock() {
