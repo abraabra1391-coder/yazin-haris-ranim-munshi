@@ -46,9 +46,7 @@ function initAudio() {
   const musicToggle = document.getElementById("musicToggle");
   if (!audio) return;
 
-  // Set comfortable volume and ensure unmuted & looping
-  audio.muted = false;
-  audio.volume = 0.6; // Clear, comfortable volume for wedding music
+  const TARGET_VOLUME = 0.6; // Clear, audible wedding music
   audio.loop = true;
 
   function syncPlayingUI() {
@@ -69,60 +67,89 @@ function initAudio() {
     }
   }
 
-  function attemptPlay() {
+  let unlocked = false;
+  function unlockAndPlay() {
+    if (unlocked && !audio.paused && !audio.muted) return;
     audio.muted = false;
+    audio.volume = TARGET_VOLUME;
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.then(() => {
+        unlocked = true;
         syncPlayingUI();
-        removeListeners();
+        removeGestureListeners();
       }).catch((err) => {
-        // Autoplay may be restricted by browser policy until first user interaction
-        syncPausedUI();
+        console.log("Audio unlock retry on next interaction:", err);
       });
     }
   }
 
-  function onUserGesture() {
-    attemptPlay();
+  function onUserInteraction() {
+    unlockAndPlay();
   }
 
-  function removeListeners() {
-    document.removeEventListener("click", onUserGesture);
-    document.removeEventListener("touchstart", onUserGesture);
-    document.removeEventListener("touchend", onUserGesture);
-    document.removeEventListener("pointerdown", onUserGesture);
-    document.removeEventListener("keydown", onUserGesture);
+  function removeGestureListeners() {
+    const events = ["click", "touchstart", "touchend", "pointerdown", "scroll"];
+    events.forEach((evt) => {
+      window.removeEventListener(evt, onUserInteraction, { capture: true });
+      document.removeEventListener(evt, onUserInteraction, { capture: true });
+    });
   }
 
-  // Listen for user gestures across the entire document
-  document.addEventListener("click", onUserGesture, { passive: true });
-  document.addEventListener("touchstart", onUserGesture, { passive: true });
-  document.addEventListener("touchend", onUserGesture, { passive: true });
-  document.addEventListener("pointerdown", onUserGesture, { passive: true });
-  document.addEventListener("keydown", onUserGesture, { passive: true });
-
-  // Direct audio event synchronization
-  audio.addEventListener("play", syncPlayingUI);
-  audio.addEventListener("playing", syncPlayingUI);
-  audio.addEventListener("pause", syncPausedUI);
-  audio.addEventListener("error", (e) => {
-    console.warn("Wedding audio encountered an error:", audio.error);
+  // Register capture-phase listeners on window & document for instantaneous response
+  const gestureEvents = ["click", "touchstart", "touchend", "pointerdown", "scroll"];
+  gestureEvents.forEach((evt) => {
+    window.addEventListener(evt, onUserInteraction, { capture: true, passive: true });
+    document.addEventListener(evt, onUserInteraction, { capture: true, passive: true });
   });
 
-  // Start playing immediately when website loads
-  attemptPlay();
+  // Direct audio event synchronization
+  audio.addEventListener("play", () => {
+    if (!audio.muted) syncPlayingUI();
+  });
+  audio.addEventListener("playing", () => {
+    if (!audio.muted) syncPlayingUI();
+  });
+  audio.addEventListener("pause", syncPausedUI);
+  audio.addEventListener("error", () => {
+    console.warn("Audio element error:", audio.error);
+  });
+
+  // 1. Direct unmuted playback (succeeds if browser allows autoplay)
+  audio.muted = false;
+  audio.volume = TARGET_VOLUME;
+  const initialPlay = audio.play();
+
+  if (initialPlay !== undefined) {
+    initialPlay.then(() => {
+      unlocked = true;
+      syncPlayingUI();
+      removeGestureListeners();
+    }).catch(() => {
+      // 2. Mobile policy blocked unmuted sound:
+      // Start muted playback immediately to spin up the audio pipeline and buffer ahead of time
+      audio.muted = true;
+      audio.play().then(() => {
+        // Playing muted, ready to unmute on first tap/scroll
+        syncPausedUI();
+      }).catch(() => {
+        syncPausedUI();
+      });
+    });
+  }
 
   if (musicToggle) {
     musicToggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      removeListeners();
-      if (audio.paused) {
+      removeGestureListeners();
+      if (audio.paused || audio.muted) {
         audio.muted = false;
+        audio.volume = TARGET_VOLUME;
         audio.play().then(() => {
+          unlocked = true;
           syncPlayingUI();
         }).catch((err) => {
-          console.warn("Audio playback prevented:", err);
+          console.warn("Audio toggle error:", err);
         });
       } else {
         audio.pause();
@@ -246,8 +273,12 @@ function unlockInvitation() {
   }, 100);
 
   const audio = document.getElementById("weddingAudio");
-  if (audio && audio.paused) {
-    audio.play().catch(() => {});
+  if (audio) {
+    audio.muted = false;
+    audio.volume = 0.6;
+    if (audio.paused) {
+      audio.play().catch(() => {});
+    }
   }
 }
 
